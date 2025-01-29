@@ -1,0 +1,176 @@
+﻿@model ProjektWebowy.Models.Serial
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h1>Details</h1>
+
+<div>
+    <h4>Serial</h4>
+    <hr />
+    <dl class="row">
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Title)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Title)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Description)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Description)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Year)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Year)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Category)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Category.Name)
+        </dd>
+        <dt class="col-sm-2">
+            Average Score
+        </dt>
+        <dd class="col-sm-10">
+            @string.Format("{0:F2}", Model.AvgRating)
+        </dd>
+    </dl>
+</div>
+<div>
+    <h3>Ratings</h3>
+    @if (User.Identity.IsAuthenticated)
+    {
+        @if (Model.Ratings.Any(r => r.UserId == UserManager.GetUserAsync(User).Result.Id))
+        {
+            <p>Your rating: @Model.Ratings.First(r => r.UserId == UserManager.GetUserAsync(User).Result.Id).Value</p>
+        }
+        else
+        {
+            <form asp-controller="Rating" asp-action="Create" method="post">
+                <input type="hidden" name="SerialId" value="@Model.Id" />
+                <label for="Value">Your rating :</label>
+                <select name="Value" id="Value">
+                    <option value="0">Select score</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+                <button type="submit" class="btn btn-primary">Rate</button>
+            </form>
+        }
+    }
+    else
+    {
+        <p><a href="/Account/Login">Log in</a> to rate this serial.</p>
+    }
+    
+</div>
+<div>
+    <canvas id="ratingsChart" width="400" height="200"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        var ctx = document.getElementById('ratingsChart').getContext('2d');
+        var chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['1 ', '2 ', '3 ', '4 ', '5 ', '6 ', '7 ', '8 ', '9 ', '10 '],
+                datasets: [{
+                    label: 'Number of Ratings',
+                    data: @Html.Raw(Json.Serialize(ViewBag.ratingDistribution)),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 206, 86, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</div>
+<div>
+    @if (User.IsInRole("Admin"))
+    {
+        <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> 
+    }
+    <a asp-action="Index">Back to List</a>
+</div>
+<div>
+    @if (User.Identity.IsAuthenticated)
+    {
+        <h4>Add a Comment</h4>
+        <form asp-controller="Comment" asp-action="Create" method="post">
+            <input type="hidden" name="SerialId" value="@Model.Id" />
+            <div class="form-group">
+                <textarea class="form-control" name="Content" rows="3" placeholder="Write your comment here..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Comment</button>
+        </form>
+    }
+    else
+    {
+        <p><a href="/Account/Login">Log in</a> to add a comment.</p>
+    }
+    <ul>
+    @foreach (var comment in Model.Comments)
+    {
+        <li>
+            <b>
+                <a asp-controller="Rating" asp-action="Index" asp-route-id="@comment.User.UserName">
+                    @comment.User?.UserName
+                </a>
+            </b>: @comment.Content
+                @if (User.Identity.IsAuthenticated && (comment.UserId == UserManager.GetUserAsync(User).Result.Id || User.IsInRole("Admin")))
+                {
+                    <form asp-controller="Comment" asp-action="Delete" method="post" style="display:inline;">
+                        <input type="hidden" name="id" value="@comment.Id" />
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                }
+        </li>
+    }
+    </ul>
+</div>

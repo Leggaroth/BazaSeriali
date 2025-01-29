@@ -1,0 +1,53 @@
+﻿@model IEnumerable<Rating>
+
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewBag.Title = ViewBag.UserName + "'s Rated Series";
+}
+
+<h1>@ViewBag.UserName's Rated Series</h1>
+
+@if (!Model.Any())
+{
+    <p>No series rated by this user.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Serial Title</th>
+                <th>Rating</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var rating in Model)
+            {
+                <tr>
+                    <td>
+                        <a asp-controller="Serial" asp-action="Details" asp-route-id="@rating.SerialId">
+                            @rating.Serial?.Title
+                        </a>
+                    </td>
+                    <td>@rating.Value</td>
+                    @if (User.Identity.IsAuthenticated && rating.UserId == UserManager.GetUserAsync(User).Result.Id)
+                    {
+                        <td>
+
+                            <form asp-controller="Rating" asp-action="Delete" method="post" style="display:inline;">
+                                <input type="hidden" name="id" value="@rating.Id" />
+                                <input type="hidden" name="username" value="@ViewBag.UserName" />
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
